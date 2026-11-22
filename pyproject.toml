@@ -1,0 +1,26 @@
+[project]
+name = "corpus-search"
+version = "0.1.0"
+description = "Local hybrid (keyword + semantic) search over a research corpus, one index per repository"
+readme = "README.md"
+authors = [
+    { name = "Farhan Feroz", email = "farhan.feroz@gmail.com" }
+]
+requires-python = "==3.12.*"
+dependencies = [
+    "fastmcp>=3.4.2",
+    "nbconvert>=7.17.1",
+    "nbformat>=5.10.4",
+    "pymupdf>=1.28.0",
+    "sentence-transformers>=5.6.0",
+    "txtai[pipeline]>=9.11.0",
+    "typer>=0.21.2",
+]
+
+[project.scripts]
+corpus-search = "corpus_search:main"
+corpus-search-mcp = "corpus_search.mcp_server:main"
+
+[build-system]
+requires = ["uv_build>=0.10.12,<0.11.0"]
+build-backend = "uv_build"

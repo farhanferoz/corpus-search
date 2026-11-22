@@ -1,0 +1,49 @@
+# corpus-search config — per-repo local hybrid search.
+
+[store]
+# Root dir for per-repo indexes. Kept outside any repo; chmod 700 (crown-jewel embeddings).
+dir = "~/.local/share/corpus-search"
+
+[embed]
+model = "BAAI/bge-small-en-v1.5"
+
+[rerank]
+# Hybrid retrieval (BM25 + dense) is the default and is near-instant (~0.3s warm).
+# A cross-encoder rerank pass was measured at ~5 min/query on CPU with the large
+# bge-reranker-v2-m3 (568M params, 30 forward passes) while adding no top-5
+# quality over hybrid-only on the first research-corpus pilot — so reranking is OFF by
+# default. Turn it on only where hybrid ordering proves weak; the default model
+# is a tiny 22M cross-encoder (seconds, not minutes), not the 568M one.
+enabled = false
+model = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+# Number of hybrid candidates to rerank when enabled.
+top_k = 30
+
+[chunk]
+# Fallback fixed-window chunking for headless prose (tokens, not chars).
+window_tokens = 512
+overlap_tokens = 64
+
+[dedup]
+# Content-similarity threshold (bag-of-words Jaccard) above which an orphan-PDF
+# candidate is treated as a duplicate of its matching markdown file and skipped.
+# Calibrated empirically against a research corpus: 5 true markdown->PDF export
+# pairs scored 0.73-0.96 Jaccard; 10 unrelated cross-pairs scored 0.14-0.22.
+# 0.6 sits with wide margin on both sides (the plan's original ~0.8 guess would
+# have missed the weakest true pair at 0.73).
+similarity_threshold = 0.6
+# Directories (relative to a matched .md's own dir) also checked for a same-stem PDF.
+export_dirs = ["pdf", "build", "export", "out", "_output", "dist"]
+
+[walk]
+prune_dirs = [
+    ".git", "node_modules", ".venv", "venv", "__pycache__", "wandb", "data",
+    "checkpoints", ".ipynb_checkpoints", "build", "dist", "site-packages",
+]
+prose_globs = ["*.md", "*.rst", "*.txt", "*.tex"]
+
+[repos]
+# repo-slug = absolute path. The slug names the per-repo index directory.
+# Keep your own list outside this repository, in ~/.config/corpus-search/repos.toml (or the file named by
+# CORPUS_SEARCH_REPOS), as a [repos] table in the same form; it is read on top of this file. For example:
+#   "my-notes" = "~/dev/my-notes"
