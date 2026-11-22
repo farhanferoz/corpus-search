@@ -9,11 +9,15 @@ Part of a Claude Code working setup: see
 Retrieval is **hybrid BM25 + dense** and is near-instant. Cross-encoder
 reranking is available but **off by default** (see "Reranking" below).
 
-## Setup
+## Install
 
 ```
-uv sync
+uv tool install --editable .
+corpus-search --help
 ```
+
+This puts `corpus-search` and `corpus-search-mcp` on your `PATH`. For development, `uv sync` creates a
+virtual environment, and every command below then runs as `uv run corpus-search ...`.
 
 List the repositories to index in a personal file outside this repository,
 `~/.config/corpus-search/repos.toml` (or the file named by `CORPUS_SEARCH_REPOS`), as a `[repos]` table of
@@ -23,13 +27,20 @@ settings and names no repositories, so your project list never lands in this rep
 ## Usage
 
 ```
-uv run corpus-search index <repo-slug>                # build/rebuild one index
-uv run corpus-search index-all                        # (re)build every configured repo
-uv run corpus-search index-all --changed-only         # re-embed only repos whose sources changed
-uv run corpus-search query <repo-slug> "<question>"   # search one repo
-uv run corpus-search search-all "<question>"          # search every repo, merged by score
-uv run corpus-search query <repo-slug> "<question>" --k 5
+corpus-search index <repo-slug>                # update one index (full build when none exists)
+corpus-search index <repo-slug> --full         # force a full rebuild
+corpus-search index-all                        # update every configured repo
+corpus-search index-all --changed-only         # skip repos whose sources are unchanged
+corpus-search index-all --skip-existing        # skip repos that already have an index
+corpus-search query <repo-slug> "<question>"   # search one repo
+corpus-search search-all "<question>"          # search every repo, merged by score
+corpus-search query <repo-slug> "<question>" --k 5
 ```
+
+Updates are incremental by default. Only files whose modification time advanced are re-embedded.
+Use `--full` after changing the embedding model or the chunk settings. Every command takes
+`--config <path>` to read another `corpus-search.toml`, and `query` and `search-all` take `--k`
+(default 10).
 
 `--changed-only` compares each repo's source-file mtimes against its last index
 build and skips repos that are already current — so a routine refresh only
@@ -66,6 +77,26 @@ daemon (spinning one up on demand), so the MCP process stays a thin client and
 never loads its own model — N connected sessions cost one shared ~1.25 GB daemon,
 not N. (For agents that can shell out, the `corpus-search` CLI is an even leaner
 path — no tool schema, same daemon.)
+
+## Configuration
+
+`corpus-search.toml` holds every setting. Its values are the defaults.
+
+| Section | Key | Default | Meaning |
+|---|---|---|---|
+| `[store]` | `dir` | `~/.local/share/corpus-search` | Root of the per-repo indexes |
+| `[embed]` | `model` | `BAAI/bge-small-en-v1.5` | Embedding model |
+| `[rerank]` | `enabled` | `false` | Cross-encoder reranking |
+| `[rerank]` | `model` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Reranker model |
+| `[rerank]` | `top_k` | `30` | Hybrid candidates passed to the reranker |
+| `[chunk]` | `window_tokens`, `overlap_tokens` | `512`, `64` | Fixed-window chunking of headless prose |
+| `[dedup]` | `similarity_threshold` | `0.6` | Word-set overlap above which a PDF counts as a copy of a markdown file |
+| `[dedup]` | `export_dirs` | `pdf`, `build`, `export`, `out`, `_output`, `dist` | Directories searched for a same-name PDF |
+| `[walk]` | `prune_dirs`, `prose_globs` | see the file | Directories skipped and prose files indexed |
+| `[repos]` | slug = path | empty | Repositories to index (see Install) |
+
+The daemon option `--idle-timeout` defaults to 1200 seconds. `CORPUS_SEARCH_REPOS` names the personal
+repository list, and `XDG_CONFIG_HOME` moves its default location.
 
 ## Reranking (opt-in)
 
