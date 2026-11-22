@@ -11,6 +11,9 @@ reranking is available but **off by default** (see "Reranking" below).
 
 ## Install
 
+Needs a C/C++ compiler: `txtai[pipeline]` pulls in `llama-cpp-python`, which PyPI ships only as source
+(Debian or Ubuntu: `sudo apt install build-essential`; macOS: `xcode-select --install`).
+
 ```
 uv tool install --editable .
 corpus-search --help
